@@ -1,12 +1,16 @@
 # AI Image Creator
 
-A simple web application for generating images from text prompts using AI.
+A beautiful web application for generating AI images from text prompts using three fallback APIs (GiftedTech Stable Diffusion, DeepImg, Vision).
 
 ## Features
 
-- Enter a prompt and generate an image.
-- View generated images in the browser.
-- Simple Flask backend.
+- Modern, responsive UI with Bootstrap.
+- Generates images from user prompts using three AI APIs in fallback order:
+    1. Stable Diffusion (`/api/ai/sd`)
+    2. DeepIMG (`/api/ai/deepimg`)
+    3. Vision (`/api/ai/vision`)
+- If all fail, displays a placeholder image.
+- Error feedback, loading spinner, and user prompt display.
 
 ## Setup
 
@@ -16,14 +20,21 @@ A simple web application for generating images from text prompts using AI.
     pip install -r requirements.txt
     ```
 
-2. Run the app:
+2. Create a `static/images/placeholder.png` file (any PNG image for fallback).
+
+3. Run the app:
 
     ```bash
     python app.py
     ```
 
-3. Open your browser to `http://127.0.0.1:5000/`
+4. Go to `http://127.0.0.1:5000/` in your browser.
 
 ## Notes
 
-- Replace the placeholder logic in `main.py` with your AI model or image-generation code.
+- Uses a free API key (`gifted`) for demonstration. For production, secure your API keys.
+- The Vision API uses a default seed image; you may update this logic for your use case.
+
+---
+
+**Enjoy creating with the power of AI!**

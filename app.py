@@ -7,11 +7,13 @@ app = Flask(__name__)
 @app.route("/", methods=["GET", "POST"])
 def index():
     image_path = None
+    error = None
+    prompt = ""
     if request.method == "POST":
-        prompt = request.form.get("prompt")
+        prompt = request.form.get("prompt", "")
         if prompt:
-            image_path = generate_image(prompt)
-    return render_template("index.html", image_path=image_path)
+            image_path, error = generate_image(prompt)
+    return render_template("index.html", image_path=image_path, prompt=prompt, error=error)
 
 @app.route("/static/images/<filename>")
 def send_image(filename):
