@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Image Creator</title>
+</head>
+<body>
+    <h1>AI Image Creator</h1>
+    <form method="post">
+        <input type="text" name="prompt" placeholder="Enter prompt" required>
+        <button type="submit">Generate Image</button>
+    </form>
+    {% if image_path %}
+        <h2>Generated Image:</h2>
+        <img src="{{ image_path }}" alt="Generated Image" style="max-width:400px;">
+    {% endif %}
+</body>
+</html>
