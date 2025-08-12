@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Chat & Image Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 2em; background: #f7f7fa; }
+        #chatContainer { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #ccc; padding: 2em; }
+        #messages { max-height: 400px; overflow-y: auto; margin-bottom: 1em; }
+        .message { margin: 1em 0; display: flex; }
+        .user { justify-content: flex-end; }
+        .bot { justify-content: flex-start; }
+        .bubble { padding: 1em; border-radius: 16px; max-width: 75%; }
+        .user .bubble { background: #0077ff; color: #fff; border-bottom-right-radius: 4px; }
+        .bot .bubble { background: #e5e5eb; color: #222; border-bottom-left-radius: 4px; }
+        img.ai-image { max-width: 250px; max-height: 250px; display: block; margin-top: 8px; border-radius: 12px; border: 1px solid #ccc; }
+        #inputRow { display: flex; gap: 0.5em; }
+        #userInput { flex: 1; padding: 0.7em; border-radius: 8px; border: 1px solid #aaa; }
+        #sendBtn, #imageBtn { padding: 0.7em 1.5em; border-radius: 8px; border: none; background: #0077ff; color: #fff; cursor: pointer; }
+        #sendBtn:disabled, #imageBtn:disabled { background: #aaa; cursor: not-allowed; }
+        #extraApiRow { margin: 1em 0; }
+        #extraApiInput { width: 100%; padding: 0.5em; border-radius: 6px; border: 1px solid #aaa; }
+    </style>
+</head>
+<body>
+    <div id="chatContainer">
+        <div id="messages"></div>
+        <form id="inputRow" autocomplete="off">
+            <input type="text" id="userInput" placeholder="Type a message or image prompt..." required />
+            <button type="button" id="sendBtn">Send</button>
+            <button type="button" id="imageBtn">Image</button>
+        </form>
+        <div id="extraApiRow">
+            <label for="extraApiInput">Add extra AI image API (URL, use {prompt} for prompt):</label>
+            <input type="text" id="extraApiInput" placeholder="e.g. https://myapi.com/gen?key=abc&prompt={prompt}" />
+        </div>
+    </div>
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const imageBtn = document.getElementById('imageBtn');
+        const extraApiInput = document.getElementById('extraApiInput');
+
+        // All image APIs to try in order (with {prompt} as placeholder)
+        let aiImageApis = [
+            "https://api.giftedtech.co.ke/api/ai/text2img?apikey=gifted&prompt={prompt}",
+            "https://api.giftedtech.co.ke/api/ai/text2ghibli?apikey=gifted&prompt={prompt}",
+            "https://api.giftedtech.co.ke/api/ai/fluximg?apikey=gifted&prompt={prompt}",
+            "https://api.giftedtech.co.ke/api/ai/sd?apikey=gifted&prompt={prompt}",
+            "https://api.giftedtech.co.ke/api/ai/deepimg?apikey=gifted&prompt={prompt}",
+            "https://api.giftedtech.co.ke/api/ai/vision?apikey=gifted&prompt={prompt}&url=https%3A%2F%2Ffiles.giftedtech.web.id%2Fimage%2Fmygifted.png"
+        ];
+
+        // Optionally add a custom API
+        extraApiInput.addEventListener('change', () => {
+            const url = extraApiInput.value.trim();
+            if (url) {
+                aiImageApis = aiImageApis.filter(api => !api.includes('custom'));
+                aiImageApis.push(url.replace('{prompt}', '{prompt}') + '&custom=1');
+            }
+        });
+
+        function scrollToBottom() {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addMessage(sender, text, isImage = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            if (isImage) {
+                const img = document.createElement('img');
+                img.src = text;
+                img.className = 'ai-image';
+                img.alt = "Generated AI Image";
+                bubble.appendChild(img);
+            } else {
+                bubble.textContent = text;
+            }
+            msgDiv.appendChild(bubble);
+            messagesDiv.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        // AI Chat: Use the GiftedTech OpenAI-like API
+        async function aiChatReply(message) {
+            const url = "https://api.giftedtech.co.ke/api/ai/openai?apikey=gifted&q=" + encodeURIComponent(message);
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                // Try to find main text reply
+                let reply = data.message || data.result || data.answer || data.text || JSON.stringify(data);
+                return reply;
+            } catch (e) {
+                return "❌ Failed to contact AI chat API.";
+            }
+        }
+
+        // Try all image APIs in order until one works
+        async function tryAllImageApis(prompt) {
+            for (let apiUrl of aiImageApis) {
+                const url = apiUrl.replace('{prompt}', encodeURIComponent(prompt));
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    // Check common response fields
+                    if (data.image || data.url) {
+                        return data.image || data.url;
+                    }
+                    if (data.data && (data.data.image || data.data.url)) {
+                        return data.data.image || data.data.url;
+                    }
+                } catch (err) {
+                    continue;
+                }
+            }
+            return null;
+        }
+
+        // Handle sending a chat message (text)
+        sendBtn.onclick = async () => {
+            const message = userInput.value.trim();
+            if (!message) return;
+            addMessage('user', message);
+            userInput.value = '';
+            sendBtn.disabled = imageBtn.disabled = true;
+            const reply = await aiChatReply(message);
+            addMessage('bot', reply);
+            sendBtn.disabled = imageBtn.disabled = false;
+        };
+
+        // Handle sending an image prompt
+        imageBtn.onclick = async () => {
+            const prompt = userInput.value.trim();
+            if (!prompt) return;
+            addMessage('user', prompt);
+            userInput.value = '';
+            sendBtn.disabled = imageBtn.disabled = true;
+            addMessage('bot', "Generating image...");
+            const imgUrl = await tryAllImageApis(prompt);
+            if (imgUrl) {
+                addMessage('bot', imgUrl, true);
+            } else {
+                addMessage('bot', "❌ All image APIs failed. Please try another prompt or add a custom API above.");
+            }
+            sendBtn.disabled = imageBtn.disabled = false;
+        };
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (document.activeElement === userInput) {
+                    sendBtn.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
